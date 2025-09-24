@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Wdnesday — Ultron Assistant</title>
+
+  <meta name="theme-color" content="#121212" />
+  <link rel="manifest" href="manifest.json" />
+
+  <style>
+    :root{
+      --bg: #0f1112;
+      --card: #151718;
+      --accent: #c33;        /* vermelho destaque */
+      --accent-2: #8b1d1d;
+      --muted: #aeb3b8;
+      --text: #e9ecef;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#0b0c0d 0%,#101214 100%);color:var(--text)}
+    .app{height:100%;display:flex;flex-direction:column;align-items:center;padding:0 12px;}
+    header{width:100%;max-width:1100px;padding:18px 0 6px;text-align:center}
+    h1{margin:0;font-size:1.4rem;letter-spacing:0.4px}
+    p.subtitle{margin:6px 0 0;color:var(--muted);font-size:0.95rem}
+
+    main{flex:1;width:100%;max-width:1100px;display:flex;gap:16px;padding:12px 0;align-items:stretch}
+    /* left: chat */
+    .panel{flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--card),#0f1112);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.6);overflow:hidden;border:1px solid var(--glass)}
+    .chat-header{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid rgba(255,255,255,0.03)}
+    .badge{background:linear-gradient(90deg,var(--accent),var(--accent-2));padding:8px 10px;border-radius:10px;font-weight:600;box-shadow:0 4px 12px rgba(203,50,50,0.12)}
+    .chat-body{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(180deg,#0f1112,#090a0b)}
+    .msg{max-width:78%;padding:10px 14px;border-radius:12px;font-size:0.95rem;line-height:1.3;word-break:break-word}
+    .msg.user{align-self:flex-end;background:linear-gradient(90deg,#c33,#8b1d1d);color:white;box-shadow:0 6px 18px rgba(140,20,20,0.15)}
+    .msg.bot{align-self:flex-start;background:#121314;border:1px solid rgba(255,255,255,0.02);color:var(--text)}
+    .controls{display:flex;gap:8px;padding:12px;border-top:1px solid rgba(255,255,255,0.02);background:linear-gradient(180deg,#0f1112,#0d0e0f)}
+    #userInput{flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:#0b0c0d;color:var(--text);outline:none}
+    button{background:var(--accent);color:#fff;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:8px 10px}
+    .side{width:360px;display:flex;flex-direction:column;gap:16px}
+    .card{background:linear-gradient(180deg,#121314,#0d0e0f);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.02)}
+    .meta{color:var(--muted);font-size:0.88rem}
+    .actions{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .actions button{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--text);padding:10px;border-radius:10px;text-align:left}
+    footer{width:100%;max-width:1100px;padding:12px;text-align:center;color:var(--muted);font-size:0.85rem}
+    @media (max-width:900px){main{flex-direction:column}.side{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Wdnesday</h1>
+      <p class="subtitle"></p>
+    </header>
+
+    <main>
+      <section class="panel" aria-labelledby="chat-title">
+        <div class="chat-header">
+          <div class="badge">Wdnesday</div>
+          <div style="flex:1">
+            <div style="font-weight:600"></div>
+            <div style="font-size:0.85rem;color:var(--muted)"></div>
+          </div>
+          <div class="meta" id="notifStatus"></div>
+        </div>
+
+        <div id="chatbox" class="chat-body" aria-live="polite"></div>
+
+        <div class="controls">
+          <input id="userInput" placeholder="Diga algo — ex: 'Quanto é 12+7', 'me lembra de estudar em 10 min', 'quantos usuários temos'..." autocomplete="off" />
+          <button id="sendBtn">Enviar</button>
+          <button id="micBtn" class="ghost" title="Ouvir comando por voz">🎤</button>
+          <button id="shotBtn" class="ghost" title="Captura de tela">📸</button>
+        </div>
+        <div style="padding:10px;border-top:1px solid rgba(255,255,255,0.02);background:transparent;display:flex;gap:8px;align-items:center">
+          <button id="btnHelp" class="ghost">Ajuda</button>
+          <button id="clearMemory" class="ghost">Limpar memória</button>
+        </div>
+      </section>
+
+      <aside class="side">
+        <div class="card">
+          <div style="font-weight:700">Ações rápidas</div>
+          <div class="meta" style="margin-top:6px">Toque para executar</div>
+          <div class="actions">
+            <button id="btnStats">Quantos usuários temos?</button>
+            <button id="btnWeather">Que tempo faz aqui?</button>
+            <button id="btnCam">Abrir câmera</button>
+            <button id="btnScreen">Capturar tela</button>
+            <button id="btnClipboard">Ler clipboard</button>
+            <button id="btnVibrate">Vibrar (se suportado)</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:700">Memória local</div>
+          <div class="meta" id="memInfo">Perguntas salvas: 0</div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:700"></div>
+          <div class="meta" style="margin-top:6px"></div>
+        </div>
+      </aside>
+    </main>
+
+    <footer></footer>
+  </div>
+
+  <!-- screenshot lib -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <script type="module">
+    // -------------------------
+    // FIREBASE CONFIG (use a sua)
+    // -------------------------
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, get, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDsP7lNqu-tDpJxpsyv8t1DW0M_u2EAE3o",
+      authDomain: "bartolomeu-cruz.firebaseapp.com",
+      databaseURL: "https://bartolomeu-cruz-default-rtdb.firebaseio.com",
+      projectId: "bartolomeu-cruz",
+      storageBucket: "bartolomeu-cruz.appspot.com",
+      messagingSenderId: "408863884951",
+      appId: "1:408863884951:web:13e8c2282139c1307dcbd2",
+      measurementId: "G-8TF4WLHKX3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // -------------------------
+    // UI ELEMENTS
+    // -------------------------
+    const chatbox = document.getElementById('chatbox');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const micBtn = document.getElementById('micBtn');
+    const shotBtn = document.getElementById('shotBtn');
+    const btnHelp = document.getElementById('btnHelp');
+    const clearMemory = document.getElementById('clearMemory');
+    const btnStats = document.getElementById('btnStats');
+    const btnWeather = document.getElementById('btnWeather');
+    const btnCam = document.getElementById('btnCam');
+    const btnScreen = document.getElementById('btnScreen');
+    const btnClipboard = document.getElementById('btnClipboard');
+    const btnVibrate = document.getElementById('btnVibrate');
+    const notifStatus = document.getElementById('notifStatus');
+    const memInfo = document.getElementById('memInfo');
+
+    // -------------------------
+    // SMALL HELPERS
+    // -------------------------
+    function addMessage(text, who='bot'){
+      const el = document.createElement('div');
+      el.className = 'msg ' + (who === 'user' ? 'user' : 'bot');
+      el.innerText = text;
+      chatbox.appendChild(el);
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    function speak(text){
+      try{
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'pt-BR';
+        speechSynthesis.speak(u);
+      }catch(e){}
+    }
+
+    function notifyUser(text){
+      if (Notification.permission === 'granted') {
+        try { new Notification('Wdnesday', { body: text, icon: 'icon-192.png' }); }
+        catch(e){}
+      }
+    }
+
+    function updateMemInfo(){
+      const db = JSON.parse(localStorage.getItem('wd_qas')||'{}');
+      memInfo.innerText = 'Perguntas salvas: ' + Object.keys(db).length;
+    }
+    updateMemInfo();
+
+    // -------------------------
+    // TUTORIAL / ONBOARDING
+    // -------------------------
+    function showTutorial(){
+      addMessage('👋 Olá — eu sou a Wdnesday, seu assistente pessoal.', 'bot');
+      addMessage('Posso calcular, lembrar, mostrar o clima da sua região, buscar informações na Wikipedia ou DuckDuckGo, acessar câmera, capturar tela, copiar/colar e muito mais.', 'bot');
+      addMessage('Exemplos de comandos:', 'bot');
+      addMessage('• "quanto é 12 + 8"', 'bot');
+      addMessage('• "me lembra de beber água em 10 min"', 'bot');
+      addMessage('• "qual o clima agora?"', 'bot');
+      addMessage('• "quem é Albert Einstein?"', 'bot');
+      addMessage('• "quantos usuários temos?"', 'bot');
+      addMessage('• "abrir câmera" / "capturar tela"', 'bot');
+      addMessage('• "copiar" / "colar"', 'bot');
+      addMessage('Peça "ajuda" a qualquer momento para ver isso de novo.', 'bot');
+    }
+
+    if (!localStorage.getItem('wd_tutorial_shown')) {
+      showTutorial();
+      localStorage.setItem('wd_tutorial_shown','1');
+    } else {
+      addMessage('Olá — envie uma mensagem ou diga "ajuda" para ver exemplos.', 'bot');
+    }
+
+    // -------------------------
+    // REMINDERS (localStorage + scheduling)
+    // -------------------------
+    function loadReminders(){ return JSON.parse(localStorage.getItem('wd_reminders')||'[]'); }
+    function saveReminders(arr){ localStorage.setItem('wd_reminders', JSON.stringify(arr)); }
+    function scheduleReminder(rem){
+      const delay = rem.when - Date.now();
+      if (delay <= 0) return;
+      rem.timeoutId = setTimeout(()=>{
+        const msg = `🔔 Lembrete: ${rem.text}`;
+        addMessage(msg, 'bot');
+        notifyUser(msg);
+        speak(msg);
+        // remove
+        const arr = loadReminders().filter(r=>r.id !== rem.id);
+        saveReminders(arr);
+      }, delay);
+    }
+    function scheduleAll(){
+      const arr = loadReminders();
+      arr.forEach(r => {
+        // avoid duplicated timers (on page reload)
+        if (!r._scheduled) {
+          scheduleReminder(r);
+          r._scheduled = true;
+        }
+      });
+      saveReminders(arr);
+    }
+    scheduleAll();
+
+    function createReminderFromText(text){
+      // patterns:
+      // "me lembra de X em N min"  OR "me lembra de X às HH:MM"
+      let m = text.match(/(?:lembra(?:-me)?|me lembra)\s+(?:de\s+)?(.+?)\s+em\s+(\d+)\s*min/i);
+      if (m){
+        const what = m[1].trim();
+        const mins = parseInt(m[2],10);
+        const when = Date.now() + mins*60000;
+        const rem = { id:'r'+Date.now(), text:what, when };
+        const arr = loadReminders(); arr.push(rem); saveReminders(arr); scheduleReminder(rem);
+        addMessage(`✅ Lembrete salvo: "${what}" em ${mins} minutos.`, 'bot');
+        notifyUser(`Lembrete salvo: ${what}`);
+        return true;
+      }
+      m = text.match(/(?:lembra(?:-me)?|me lembra)\s+(?:de\s+)?(.+?)\s+às\s+(\d{1,2}:\d{2})/i);
+      if (m){
+        const what = m[1].trim();
+        const hhmm = m[2];
+        const [hh,mm] = hhmm.split(':').map(x=>parseInt(x,10));
+        const now = new Date();
+        let when = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+        if (when.getTime() <= Date.now()) when = new Date(when.getTime() + 24*3600000);
+        const rem = { id:'r'+Date.now(), text:what, when:when.getTime() };
+        const arr = loadReminders(); arr.push(rem); saveReminders(arr); scheduleReminder(rem);
+        addMessage(`✅ Lembrete salvo: "${what}" às ${hhmm}.`, 'bot');
+        notifyUser(`Lembrete salvo: ${what} às ${hhmm}`);
+        return true;
+      }
+      return false;
+    }
+
+    // -------------------------
+    // HELPERS: Math safety (limited)
+    // -------------------------
+    function tryMath(expr){
+      // allow digits, spaces and operators only
+      if (!/^[0-9+\-*/().% \t]+$/.test(expr)) return null;
+      try {
+        // eslint-disable-next-line no-new-func
+        const fn = new Function('return ('+expr+')');
+        const r = fn();
+        if (typeof r === 'number' && isFinite(r)) return r;
+      } catch(e){}
+      return null;
+    }
+
+    // -------------------------
+    // WIKI / DUCKDUCKGO
+    // -------------------------
+    async function searchDuckDuckGo(q){
+      try{
+        const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data.AbstractText) return data.AbstractText;
+        if (data.RelatedTopics && data.RelatedTopics.length) {
+          const t = data.RelatedTopics[0].Text || data.RelatedTopics[0].Result || null;
+          if (t) return t;
+        }
+      }catch(e){}
+      return null;
+    }
+    async function searchWikipedia(q){
+      try{
+        const url = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q)}`;
+        const res = await fetch(url);
+        if (res.ok){
+          const j = await res.json();
+          return j.extract || null;
+        }
+      }catch(e){}
+      return null;
+    }
+
+    // -------------------------
+    // FIREBASE STATS (usuarios)
+    // -------------------------
+    async function fetchUserStats(){
+      try{
+        const mascSnap = await get(ref(db,'masculino'));
+        const femSnap = await get(ref(db,'feminino'));
+        const outrosSnap = await get(ref(db,'outros'));
+        const m = mascSnap.exists() ? Object.keys(mascSnap.val()).length : 0;
+        const f = femSnap.exists() ? Object.keys(femSnap.val()).length : 0;
+        const o = outrosSnap.exists() ? Object.keys(outrosSnap.val()).length : 0;
+        return { total: m+f+o, masc:m, fem:f, outros:o };
+      }catch(e){
+        return null;
+      }
+    }
+
+    // real-time notifications for changes in counts
+    let lastCounts = null;
+    try{
+      // observe root for changes
+      onValue(ref(db,'/'), async () => {
+        const s = await fetchUserStats();
+        if (!s) return;
+        const current = [s.masc, s.fem, s.outros];
+        if (!lastCounts) lastCounts = current;
+        if (JSON.stringify(current) !== JSON.stringify(lastCounts)){
+          const msg = `Atualização: Usuários — total ${s.total}: masculino ${s.masc}, feminino ${s.fem}, outros ${s.outros}.`;
+          addMessage(msg, 'bot');
+          notifyUser(msg);
+          speak(msg);
+          lastCounts = current;
+        }
+      });
+    }catch(e){ /* ignore */ }
+
+    // -------------------------
+    // BROWSER RESOURCES (camera, screen, clipboard, vibrate)
+    // -------------------------
+    async function openCamera(){
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
+        console.log('camera stream', stream);
+        addMessage('📷 Câmera ativada — veja o console para o stream (use getDisplayMedia para tela).', 'bot');
+      }catch(e){
+        addMessage('Erro ao abrir câmera: ' + e.message, 'bot');
+      }
+    }
+    async function captureScreen(){
+      try{
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video:true });
+        console.log('screen stream', stream);
+        addMessage('🖥️ Captura de tela iniciada — ver console.', 'bot');
+      }catch(e){
+        addMessage('Erro ao capturar tela: ' + e.message, 'bot');
+      }
+    }
+    async function readClipboard(){
+      try{
+        const txt = await navigator.clipboard.readText();
+        addMessage('📋 Clipboard: ' + (txt||'(vazio)'), 'bot');
+      }catch(e){
+        addMessage('Não foi possível ler o clipboard: ' + e.message, 'bot');
+      }
+    }
+    function doVibrate(){
+      if (navigator.vibrate) {
+        navigator.vibrate([200,100,200]);
+        addMessage('📳 Vibrando (se o dispositivo suportar).', 'bot');
+      } else addMessage('Vibração não suportada neste dispositivo.', 'bot');
+    }
+
+    // -------------------------
+    // SCREENSHOT (html2canvas)
+    // -------------------------
+    async function takeScreenshot(){
+      try{
+        const canvas = await html2canvas(document.querySelector('.app'), { scale: 1.0 });
+        const data = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.download = 'wdnesday-screenshot.png';
+        a.href = data;
+        a.click();
+        addMessage('📸 Screenshot salvo.', 'bot');
+        notifyUser('Screenshot salvo.');
+      }catch(e){
+        addMessage('Erro ao capturar screenshot: ' + e.message, 'bot');
+      }
+    }
+
+    // -------------------------
+    // SPEECH RECOGNITION (microphone)
+    // -------------------------
+    function startSpeechRecognition(){
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(!SpeechRec){ addMessage('Reconhecimento de voz não suportado neste navegador.', 'bot'); return; }
+      const rec = new SpeechRec();
+      rec.lang = 'pt-BR';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      rec.onresult = (ev) => {
+        const text = ev.results[0][0].transcript;
+        userInput.value = text;
+        handleUserText(text);
+      };
+      rec.onerror = (e) => { addMessage('Erro de voz: ' + e.error, 'bot'); };
+      rec.onend = ()=>{};
+      rec.start();
+      addMessage('🎙️ Ouvindo — fale agora...', 'bot');
+    }
+
+    // -------------------------
+    // MAIN: interpretar mensagem do usuário
+    // -------------------------
+    async function handleUserText(raw){
+      const original = raw.trim();
+      if (!original) return;
+      addMessage(original, 'user');
+
+      const text = original.toLowerCase();
+
+      // if user asks for help
+      if (/^(ajuda|help|como usar|o que você faz)/i.test(text)){
+        showTutorial();
+        return;
+      }
+
+      // try parse reminders first
+      if (/lembra|lembre|remind/i.test(text)){
+        const ok = createReminderFromText(text);
+        if (ok) { updateMemInfo(); return; }
+        // else continue and ask for clarification
+        addMessage('Não entendi o lembrete. Diga por exemplo: "me lembra de estudar em 10 min" ou "me lembra de X às 18:00".', 'bot');
+        return;
+      }
+
+      // math
+      const mathRes = tryMath(text);
+      if (mathRes !== null){
+        const rmsg = `🧮 Resultado: ${mathRes}`;
+        addMessage(rmsg, 'bot'); speak(rmsg); return;
+      }
+
+      // stats (firebase)
+      if (/usuário|usuarios|utilizadores|quantos usuários|quantos utilizadores/i.test(text)){
+        addMessage('Consultando números de usuários...', 'bot');
+        const s = await fetchUserStats();
+        if (s) {
+          const msg = `Temos ${s.total} usuários: ${s.masc} masculinos, ${s.fem} femininos e ${s.outros} outros.`;
+          addMessage(msg, 'bot'); speak(msg);
+        } else {
+          addMessage('Erro ao consultar o Firebase.', 'bot');
+        }
+        return;
+      }
+
+      // climate
+      if (/clima|tempo|temperatura|previsão/i.test(text)){
+        if (navigator.geolocation){
+          addMessage('Pegando sua localização e clima...', 'bot');
+          navigator.geolocation.getCurrentPosition(async pos=>{
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            try{
+              const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+              const j = await r.json();
+              const cw = j.current_weather;
+              const msg = `Agora: ${cw.temperature}°C, vento ${cw.windspeed} km/h.`;
+              addMessage(msg, 'bot'); speak(msg);
+            }catch(e){
+              addMessage('Erro ao obter clima: ' + e.message, 'bot');
+            }
+          }, (err)=>{ addMessage('Erro de localização: ' + err.message, 'bot'); });
+        } else addMessage('Geolocalização não suportada.', 'bot');
+        return;
+      }
+
+      // camera
+      if (/câmera|camera|abrir câmera|abrir camera/i.test(text)){
+        await openCamera(); return;
+      }
+
+      // screen capture
+      if (/captur(ar|a) tela|captura de tela|capturar tela/i.test(text)){
+        await captureScreen(); return;
+      }
+
+      // clipboard
+      if (/clipboard|colar|colar texto|copiar|copiar texto/i.test(text)){
+        if (/ler|ler clipboard|colar/i.test(text)){
+          await readClipboard(); return;
+        } else {
+          addMessage('Você pode colar (CTRL+V) no campo de entrada; para ler o clipboard diga "ler clipboard".', 'bot'); return;
+        }
+      }
+
+      // vibrate
+      if (/vibra|vibrar|vibrate/i.test(text)){
+        doVibrate(); return;
+      }
+
+      // wikipedia: "quem é X" or "o que é X"
+      if (/^quem é | o que é |quem foi |defina /i.test(text) || /quem é|o que é/.test(text)){
+        // extract query heuristically
+        let q = text.replace(/^quem é\s*/i,'').replace(/^o que é\s*/i,'').trim();
+        if (!q) q = text;
+        const wiki = await searchWikipedia(q);
+        if (wiki) { addMessage(wiki, 'bot'); speak('Encontrei isso na Wikipedia.'); return; }
+        const ddg = await searchDuckDuckGo(q);
+        if (ddg) { addMessage(ddg, 'bot'); speak('Encontrei isso no DuckDuckGo.'); return; }
+        addMessage('Não encontrei essa informação.', 'bot'); return;
+      }
+
+      // fallback: duckduckgo then wikipedia
+      const ddg = await searchDuckDuckGo(text);
+      if (ddg) { addMessage(ddg, 'bot'); speak('Resultado encontrado.'); return; }
+      const wiki = await searchWikipedia(text);
+      if (wiki) { addMessage(wiki, 'bot'); speak('Resultado encontrado.'); return; }
+
+      addMessage("Desculpe, não entendi. Diga 'ajuda' para ver comandos.", 'bot');
+    }
+
+    // -------------------------
+    // UI events
+    // -------------------------
+    sendBtn.addEventListener('click', ()=>{ const v = userInput.value.trim(); if (!v) return; handleUserText(v); userInput.value=''; });
+    userInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); sendBtn.click(); }});
+
+    micBtn.addEventListener('click', ()=> startSpeechRecognition());
+    shotBtn.addEventListener('click', ()=> takeScreenshot());
+    btnHelp.addEventListener('click', ()=> showTutorial());
+    clearMemory.addEventListener('click', ()=>{ localStorage.removeItem('wd_qas'); localStorage.removeItem('wd_reminders'); updateMemInfo(); addMessage('Memória local e lembretes limpos.', 'bot'); });
+    btnStats.addEventListener('click', async ()=>{ handleUserText('quantos usuários temos'); });
+    btnWeather.addEventListener('click', ()=>{ handleUserText('qual o clima agora'); });
+    btnCam.addEventListener('click', ()=>{ handleUserText('abrir câmera'); });
+    btnScreen.addEventListener('click', ()=>{ handleUserText('capturar tela'); });
+    btnClipboard.addEventListener('click', ()=>{ handleUserText('ler clipboard'); });
+    btnVibrate.addEventListener('click', ()=>{ handleUserText('vibra o celular'); });
+
+    // Notifications permission display
+    if ('Notification' in window) {
+      Notification.requestPermission().then(p => { notifStatus.innerText = p; addMessage('Notificações: ' + p, 'bot'); });
+    } else notifStatus.innerText = 'não suportado';
+
+    // Service Worker registration
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(()=>{ console.log('sw registered'); }).catch(()=>{});
+    }
+
+    // Final: update saved QAs count on load
+    updateMemInfo();
+  </script>
+</body>
+</html>

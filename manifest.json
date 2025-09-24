@@ -1,28 +1,35 @@
 {
+  "id": "com.bartolomeu.wdnesday",
   "name": "Wdnesday — Assistente Pessoal",
   "short_name": "Wdnesday",
-  "description": "Seu assistente pessoal online e offline",
+  "description": "Seu assistente pessoal online e offline com clima, lembretes, Wikipedia e muito mais.",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#1e1e1e",
   "theme_color": "#e63946",
   "orientation": "portrait",
+  "categories": ["productivity", "assistant", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
-    },
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
     {
       "src": "screenshot.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "purpose": "any"
+      "form_factor": "wide"
     }
   ]
 }
